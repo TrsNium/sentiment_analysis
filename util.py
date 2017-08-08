@@ -58,6 +58,14 @@ def convert_sentence2index(sentences, index, time_step):
         r.append(converted)
     return r
 
+def convert_label(labels):
+    r = []
+    for label in labels:
+        content = [0]*2
+        content[int(label)] = 1
+        r.append(content)
+    return np.array(r)
+
 def mk_train_data(data_path, index_path, time_step):
     labels, sentences = read_training_data(data_path)
     if  not os.path.exists(index_path):
@@ -68,5 +76,6 @@ def mk_train_data(data_path, index_path, time_step):
         save_index(set(word), index_path)
     
     indexs = read_index(index_path)
+    labels = convert_label(labels)
     converted_sentences = convert_sentence2index(sentences, indexs, time_step)
-    return np.array(labels), np.array(converted_sentences)
+    return np.array(labels), np.reshape(np.array(converted_sentences), (-1, 200, 1))
