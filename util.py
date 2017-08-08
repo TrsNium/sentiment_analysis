@@ -78,4 +78,4 @@ def mk_train_data(data_path, index_path, time_step):
     indexs = read_index(index_path)
     labels = convert_label(labels)
     converted_sentences = convert_sentence2index(sentences, indexs, time_step)
-    return np.array(labels), np.reshape(np.array(converted_sentences), (-1, 200, 1))
+    return np.array(labels), np.reshape(np.array(converted_sentences), (-1, time_step, 1))
