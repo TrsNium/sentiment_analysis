@@ -1,0 +1,6 @@
+import os
+from urllib import urlopen
+
+
+a =urlopen("https://storage.googleapis.com/kaggle-competitions-data/inclass/2558/training.txt?GoogleAccessId=competitions-data@kaggle-161607.iam.gserviceaccount.com&Expires=1502423006&Signature=lBHL5Z3NRdNyAUa%2FaKeWLn9alHhpDW3v4uxlfSuPMojTyiMSwmfVRthsupDnnsSmY1mLyCtUbSUpf%2FxH6nwdBlRgeCwpXVhLLKNDRzc%2B8ZRnWebaK%2FTHVj23Pp%2FON2f5QaEyApdeULrz2RnT07fl8gnTXcMQKug8CcnvKiJAAHCHKoNjV8T9q%2F8S5sYq7wgCuX9C3tLVlIxSP1ozQF2pVDbObCkzODEiF5pVX5Rp8yRHWgCOqoSNvAUKBp0EE8DoE7ncbTCBnFl7%2FFpjHi5QGya582A%2BRm1jaAzaMDrqVoKF4Y8llmIXt%2FyWOn5fUoZpd1uYp%2F8TURXt2hxCY1gxNQ%3D%3D")
+print(a.read())
