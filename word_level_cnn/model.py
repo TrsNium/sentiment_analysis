@@ -19,7 +19,7 @@ class model():
             embedding_weight = tf.Variable(tf.random_uniform([args.vocab_size, args.embedding_size],-1.,1.), name='embedding_weight')
             t_embedded = []
             
-            for t in range(200):
+            for t in range(args.max_time_step):
                 if t is not 0:
                     tf.get_variable_scope().reuse_variables()
 
