@@ -1,4 +1,3 @@
-# coding:utf-8
 import os
 from urllib.request import urlopen
 import re
@@ -35,7 +34,7 @@ def read_index(data_path):
     return [line.split("\n")[0] for line in lines]
      
     
-def remove_anti_pattern(sentence, patterns=[["\.+", " ."], ["\!+", " !"], ["\?+", " ?"], [",", " ,"], ["[@><_;:+#”$%'\"()=~|¥{}/\\\\]", ""],["\s+", " "]]):
+def remove_anti_pattern(sentence, patterns=[["\.+", " ."], ["\!+", " !"], ["\?+", " ?"], [",", " ,"], ["[\n\x99\x92\x80@�£ã’‘©µ…ªâ*&\]\“^[><_;:+#”$%'\"()=~|¥{}/\\\\]", ""],["\s{2,}", ""]]):
         for pattern in patterns:
             sentence = re.sub(pattern[0], pattern[1], sentence)
         return sentence    
@@ -66,6 +65,40 @@ def convert_label(labels):
         r.append(content)
     return np.array(r)
 
+def convert_sentence2word_idx(sentences, indexs, time_step, word_length):
+    r = []
+    for sentence in sentences:
+        words = remove_anti_pattern(sentence).split(" ")
+        t = []
+        for word in words[:-1]:
+            converted = [indexs.index(char) for char in word]
+            while len(converted) != word_length and len(converted) <= word_length:
+                converted.append(len(indexs))
+            t.append(converted)
+            
+        while len(t) != time_step and len(t) <= time_step:
+            t.insert(0, [len(indexs)+1]*word_length)
+        
+        r.append(t)
+    return r
+            
+
+def mk_char_level_cnn_rnn_train_data(data_path, index_path, time_step, word_length=62):
+    labels, sentences = read_training_data(data_path)
+    if  not os.path.exists(index_path):
+        chars = []
+        for sentence in sentences:
+            s_uniques = list(set(list(sentence)))
+            for s_unique in s_uniques:
+                if not s_unique in chars:
+                    chars.append(s_unique)
+        save_index(set(chars), index_path)
+    
+    indexs = read_index(index_path)
+    labels = convert_label(labels)
+    converted_sentences = convert_sentence2word_idx(sentences, indexs, time_step, word_length)
+    return np.array(labels), np.array(converted_sentences)
+
 def mk_train_data(data_path, index_path, time_step):
     labels, sentences = read_training_data(data_path)
     if  not os.path.exists(index_path):
@@ -78,4 +111,4 @@ def mk_train_data(data_path, index_path, time_step):
     indexs = read_index(index_path)
     labels = convert_label(labels)
     converted_sentences = convert_sentence2index(sentences, indexs, time_step)
-    return np.array(labels), np.reshape(np.array(converted_sentences), (-1, time_step, 1))
+    return np.array(labels), np.reshape(np.array(converted_sentences), (-1, time_steps, 1))
