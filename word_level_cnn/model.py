@@ -29,14 +29,14 @@ class model():
             cnn_inputs = tf.expand_dims(reshaped_embedded, axis=-1)
             
         kernels = [1,2,3,5]
-        filter_num = 64
+        filter_nums = [32,64,128,128]
         with tf.variable_scope("CNN") as scope:
             convded = []
             for kernel in kernels:
-                conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, args.embedding_size], activation=tf.nn.relu, name="conv_{}".format(kernel))
-                pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], strides=[args.max_time_step-kernel+1, 1])
-                convded.append(pool_)
-            convded = tf.reshape(tf.convert_to_tensor(convded), (-1, 1, 1, 256))
+                conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, name="conv_{}".format(kernel))
+                pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], strides=[1, 1])
+                convded.append(tf.reshape(pool_, (-1, filter_num)))
+            convded = tf.concat([cnn_output for cnn_output in convded], axis=-1)
         
         with tf.variable_scope("Dense") as scope:
             flatten_ = tf.contrib.layers.flatten(convded)
