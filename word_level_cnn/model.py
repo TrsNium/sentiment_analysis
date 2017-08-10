@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 import tensorflow as tf
 import argparse
 from util import *
@@ -7,7 +10,7 @@ import os
 import random
 
 class model():
-    def __init__(self):
+    def __init__(self, args):
         self.args =  args
         
         self.inputs = tf.placeholder(dtype=tf.int32, shape=[None, args.max_time_step, 1])
@@ -31,7 +34,7 @@ class model():
         filter_nums = [32,64,128,128]
         with tf.variable_scope("CNN") as scope:
             convded = []
-            for kernel in kernels:
+            for kernel, filter_num in zip(kernels, filter_nums):
                 conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, name="conv_{}".format(kernel))
                 pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], strides=[1, 1])
                 convded.append(tf.reshape(pool_, (-1, filter_num)))
@@ -51,7 +54,7 @@ class model():
     def train(self):
         opt_ = tf.train.GradientDescentOptimizer(self.args.lr).minimize(self.loss)
         
-        labels, train = mk_train_data("data/train.txt", "data/index.txt", self.args.max_time_step)
+        labels, train = mk_train_data(self.args.data_dir+"train.txt", self.args.data_dir+"index.txt", self.args.max_time_step)
         train_inp, test_inp, train_labels, test_labels = train_test_split(train, labels, test_size=0.33, random_state=42)
         train_data_size = train_inp.shape[0]
         print(train_inp.shape, test_inp.shape, train_labels.shape, test_labels.shape, train_data_size)
@@ -76,7 +79,7 @@ class model():
                     print("itr:",itr,"    loss:", loss, out)
             
                 if itr % 1000 == 0:
-                    saver.save(sess, 'saved/word_level_cnn_model.ckpt', itr)
+                    saver.save(sess, self.args.saved + '/word_level_cnn_model.ckpt', itr)
                     print('-----------------------saved model-------------------------')
 
 if __name__ == "__main__":
@@ -91,12 +94,15 @@ if __name__ == "__main__":
     parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=40)
     parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=2260)
     parser.add_argument("--train", dest="train", type=bool, default=True)
+    parser.add_argument("--saved", dest="saved", type=str, default="save/")
     args= parser.parse_args()
 
+    if not os.path.exists(args.saved):
+        os.mkdir(args.saved)
+    
     if not os.path.exists(args.data_dir):
         mk_train_and_test_data(args.data_dir)
 
     model_ = model(args)
     if args.train:
         model_.train()
-    
