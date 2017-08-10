@@ -6,7 +6,6 @@ import numpy as np
 import os
 import random
 
-
 class model():
     def __init__(self):
         self.args =  args
@@ -29,14 +28,14 @@ class model():
             cnn_inputs = tf.expand_dims(reshaped_embedded, axis=-1)
             
         kernels = [1,2,3,5]
-        filter_num = 64
+        filter_nums = [32,64,128,128]
         with tf.variable_scope("CNN") as scope:
             convded = []
             for kernel in kernels:
-                conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, args.embedding_size], activation=tf.nn.relu, name="conv_{}".format(kernel))
-                pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], strides=[args.max_time_step-kernel+1, 1])
-                convded.append(pool_)
-            convded = tf.reshape(tf.convert_to_tensor(convded), (-1, 1, 1, 256))
+                conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, name="conv_{}".format(kernel))
+                pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], strides=[1, 1])
+                convded.append(tf.reshape(pool_, (-1, filter_num)))
+            convded = tf.concat([cnn_output for cnn_output in convded], axis=-1)
         
         with tf.variable_scope("Dense") as scope:
             flatten_ = tf.contrib.layers.flatten(convded)
@@ -50,8 +49,7 @@ class model():
             tf.summary.scalar("loss", self.loss)
 
     def train(self):
-        batch_size = 10
-        opt_ = tf.train.AdamOptimizer(self.args.lr).minimize(self.loss)
+        opt_ = tf.train.GradientDescentOptimizer(self.args.lr).minimize(self.loss)
         
         labels, train = mk_train_data("data/train.txt", "data/index.txt", self.args.max_time_step)
         train_inp, test_inp, train_labels, test_labels = train_test_split(train, labels, test_size=0.33, random_state=42)
@@ -67,16 +65,38 @@ class model():
             saver = tf.train.Saver(tf.global_variables())
             graph = tf.summary.FileWriter("./logs", sess.graph)
             
-            for itr in range(100000):
-                choiced_idx = random.sample(range(train_data_size), batch_size)
+            for itr in range(self.args.itrs):
+                choiced_idx = random.sample(range(train_data_size), self.args.batch_size)
                 loss, _ = sess.run([self.loss, opt_], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:train_labels[choiced_idx]})
 
                 if itr % 100 == 0:
-                    choiced_idx = random.sample(range(train_data_size), batch_size)
+                    choiced_idx = random.sample(range(train_data_size), self.args.batch_size)
                     loss, merged_summary, out = sess.run([self.loss, summary, self.out], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:train_labels[choiced_idx]})
                     graph.add_summary(merged_summary, itr)
                     print("itr:",itr,"    loss:", loss, out)
             
                 if itr % 1000 == 0:
-                    saver.save(sess, 'saved/model.ckpt', itr)
+                    saver.save(sess, 'saved/word_level_cnn_model.ckpt', itr)
                     print('-----------------------saved model-------------------------')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("--lr", dest="lr", type=float, default= 0.2)
+    parser.add_argument("--data_dir", dest="data_dir", default="../data/")
+    parser.add_argument("--index_dir", dest="index_dir", default="../data/index.txt")
+    parser.add_argument("--itrs", dest="itrs", type=int, default=2001)
+    #parser.add_argument("--batch_size", dest="batch_size", type=int, default=10)
+    parser.add_argument("--batch_size", dest="batch_size", type=int, default=10)
+    parser.add_argument("--embedding_size", dest="embedding_size", default=64)
+    parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=40)
+    parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=2260)
+    parser.add_argument("--train", dest="train", type=bool, default=True)
+    args= parser.parse_args()
+
+    if not os.path.exists(args.data_dir):
+        mk_train_and_test_data(args.data_dir)
+
+    model_ = model(args)
+    if args.train:
+        model_.train()
+    
