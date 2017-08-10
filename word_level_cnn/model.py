@@ -34,7 +34,11 @@ class model():
         filter_nums = [32,64,128,128]
         with tf.variable_scope("CNN") as scope:
             convded = []
+<<<<<<< HEAD
             for kernel, filter_num in zip(kernels, filter_nums):
+=======
+            for kernel in kernels:
+>>>>>>> 143df184b885c2c3b234b38977133e052365dfb9
                 conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, name="conv_{}".format(kernel))
                 pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], strides=[1, 1])
                 convded.append(tf.reshape(pool_, (-1, filter_num)))
