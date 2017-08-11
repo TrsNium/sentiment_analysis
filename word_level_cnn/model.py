@@ -76,9 +76,11 @@ class model():
 
                 if itr % 10 == 0:
                     choiced_idx = random.sample(range(train_data_size), self.args.batch_size)
-                    loss, merged_summary, out = sess.run([self.loss, summary, self.out], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:train_labels[choiced_idx]})
+                    labels = train_labels[choiced_idx]
+                    loss, merged_summary, out = sess.run([self.loss, summary, self.out], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:labels})
                     graph.add_summary(merged_summary, itr)
-                    print("itr:",itr,"    loss:", loss, out)
+                    acctualy = len([i for i in range(self.args.batch_size) if np.argmax(out, -1)[i] == np.argmax(labels, -1)[i]])/self.args.batch_size
+                    print("itr:",itr,"    loss:", loss, acctualy)
             
                 if itr % 1000 == 0:
                     saver.save(sess, self.args.saved + '/word_level_cnn_model.ckpt', itr)
