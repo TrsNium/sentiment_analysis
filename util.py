@@ -34,7 +34,7 @@ def read_index(data_path):
     return [line.split("\n")[0] for line in lines]
      
     
-def remove_anti_pattern(sentence, patterns=[["\.+", " ."], ["\!+", " !"], ["\?+", " ?"], [",", " ,"], ["[\n\x99\x92\x80@�£ã’‘©µ…ªâ*&\]\“^[><_;:+#”$%'\"()=~|¥{}/\\\\]", ""],["\s{2,}", ""]]):
+def remove_anti_pattern(sentence, patterns=[["\.+", " ."], ["\!+", " !"], ["\?+", " ?"], [",", " ,"], ["[\n\x99\x92\x80@�£ã’‘©µ…ªâ*&\]\“^[\-><_;:+#”$%'\"()=~|¥{}/\\\\]", ""],["\s{2,}", ""],["\.", " ."]]):
         for pattern in patterns:
             sentence = re.sub(pattern[0], pattern[1], sentence)
         return sentence    
@@ -50,11 +50,11 @@ def read_training_data(data_path):
 def convert_sentence2index(sentences, index, time_step):
     r = []
     for sentence in sentences:
-        words = remove_anti_pattern(sentence).split(" ")
+        words = sentence.split(" ")
         converted = [index.index(word) for word in words]
         while len(converted) != time_step and len(converted) <= time_step:
             converted.append(len(index))
-        r.append(converted)
+        r.append(converted[:time_step])
     return r
 
 def convert_label(labels):
@@ -83,7 +83,7 @@ def convert_sentence2word_idx(sentences, indexs, time_step, word_length):
     return r
             
 
-def mk_char_level_cnn_rnn_train_data(data_path, index_path, time_step, word_length=62):
+def mk_char_level_cnn_rnn_train_data(data_path, index_path, time_step, word_length=40):
     labels, sentences = read_training_data(data_path)
     if  not os.path.exists(index_path):
         chars = []
@@ -111,4 +111,4 @@ def mk_train_data(data_path, index_path, time_step):
     indexs = read_index(index_path)
     labels = convert_label(labels)
     converted_sentences = convert_sentence2index(sentences, indexs, time_step)
-    return np.array(labels), np.reshape(np.array(converted_sentences), (-1, time_steps, 1))
+    return np.array(labels), np.reshape(np.array(converted_sentences), (-1, time_step, 1))

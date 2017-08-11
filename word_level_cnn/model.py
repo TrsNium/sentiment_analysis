@@ -27,21 +27,23 @@ class model():
 
                 embedded = tf.nn.embedding_lookup(embedding_weight, self.inputs[:,t,:])
                 t_embedded.append(embedded)
-            reshaped_embedded = tf.reshape(tf.transpose(tf.convert_to_tensor(t_embedded), perm=(1,0,2,3)), (-1, args.max_time_step, args.embedding_size))
-            cnn_inputs = tf.expand_dims(reshaped_embedded, axis=-1)
-            
-        kernels = [1,2,3,5]
-        filter_nums = [32,64,128,128]
+            reshaped_embedded = tf.reshape(tf.transpose(tf.convert_to_tensor(t_embedded), perm=(1,0,2,3)), (-1, args.max_time_step, args.embedding_size,1))
+           # cnn_inputs = tf.expand_dims(reshaped_embedded, axis=-1)
+            cnn_inputs = reshaped_embedded
+        kernels = [2,3,4,5,6]
+        filter_nums = [32,64,128,128,224]
         with tf.variable_scope("CNN") as scope:
             convded = []
             for kernel, filter_num in zip(kernels, filter_nums):
-                conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, name="conv_{}".format(kernel))
-                pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], strides=[1, 1])
+                conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, padding='valid', name="conv_{}".format(kernel))
+                pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], padding='valid', strides=[1, 1])
                 convded.append(tf.reshape(pool_, (-1, filter_num)))
+                print(pool_.get_shape().as_list())
             convded = tf.concat([cnn_output for cnn_output in convded], axis=-1)
         
         with tf.variable_scope("Dense") as scope:
             flatten_ = tf.contrib.layers.flatten(convded)
+            #h = tf.layers.dense(flatten_, 128, tf.nn.relu, name='dense_layers')
             logits = tf.layers.dense(flatten_, 2, name="dense_layer")
             self.out = tf.nn.softmax(logits)
             
@@ -72,7 +74,7 @@ class model():
                 choiced_idx = random.sample(range(train_data_size), self.args.batch_size)
                 loss, _ = sess.run([self.loss, opt_], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:train_labels[choiced_idx]})
 
-                if itr % 100 == 0:
+                if itr % 10 == 0:
                     choiced_idx = random.sample(range(train_data_size), self.args.batch_size)
                     loss, merged_summary, out = sess.run([self.loss, summary, self.out], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:train_labels[choiced_idx]})
                     graph.add_summary(merged_summary, itr)
@@ -87,12 +89,12 @@ if __name__ == "__main__":
     parser.add_argument("--lr", dest="lr", type=float, default= 0.2)
     parser.add_argument("--data_dir", dest="data_dir", default="../data/")
     parser.add_argument("--index_dir", dest="index_dir", default="../data/index.txt")
-    parser.add_argument("--itrs", dest="itrs", type=int, default=2001)
+    parser.add_argument("--itrs", dest="itrs", type=int, default=10001)
     #parser.add_argument("--batch_size", dest="batch_size", type=int, default=10)
-    parser.add_argument("--batch_size", dest="batch_size", type=int, default=10)
+    parser.add_argument("--batch_size", dest="batch_size", type=int, default=40)
     parser.add_argument("--embedding_size", dest="embedding_size", default=64)
-    parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=40)
-    parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=2260)
+    parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=20)
+    parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=2348)
     parser.add_argument("--train", dest="train", type=bool, default=True)
     parser.add_argument("--saved", dest="saved", type=str, default="save/")
     args= parser.parse_args()
