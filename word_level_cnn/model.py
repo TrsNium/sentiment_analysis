@@ -59,6 +59,7 @@ class model():
         labels, train = mk_train_data(self.args.data_dir+"train.txt", self.args.data_dir+"index.txt", self.args.max_time_step)
         train_inp, test_inp, train_labels, test_labels = train_test_split(train, labels, test_size=0.33, random_state=42)
         train_data_size = train_inp.shape[0]
+        test_data_size = test_inp.shape[0]
         print(train_inp.shape, test_inp.shape, train_labels.shape, test_labels.shape, train_data_size)
         
         config = tf.ConfigProto()
@@ -85,6 +86,18 @@ class model():
                 if itr % 1000 == 0:
                     saver.save(sess, self.args.saved + '/word_level_cnn_model.ckpt', itr)
                     print('-----------------------saved model-------------------------')
+
+            acctualy_ = 0.
+            for i in range(int(test_data_size/self.args.batch_size)):
+                labels = test_labels[i*self.args.batch_size:(i+1)*self.args.batch_size]
+                out = sess.run(self.out, feed_dict={self.inputs: test_inp[i*self.args.batch_size:(i+1)*self.args.batch_size]})
+                acctualy = len([i for i in range(self.args.batch_size) if np.argmax(out, -1)[i] == np.argmax(labels, -1)[i]])/self.args.batch_size
+                acctualy_ += acctualy
+                print(acctualy)
+            print("avg", acctualy_/(int(test_data_size/self.args.batch_size)))
+            
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
