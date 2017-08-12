@@ -38,12 +38,10 @@ class model():
                 conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, padding='valid', name="conv_{}".format(kernel))
                 pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], padding='valid', strides=[1, 1])
                 convded.append(tf.reshape(pool_, (-1, filter_num)))
-                print(pool_.get_shape().as_list())
             convded = tf.concat([cnn_output for cnn_output in convded], axis=-1)
         
         with tf.variable_scope("Dense") as scope:
             flatten_ = tf.contrib.layers.flatten(convded)
-            #h = tf.layers.dense(flatten_, 128, tf.nn.relu, name='dense_layers')
             logits = tf.layers.dense(flatten_, 2, name="dense_layer")
             self.out = tf.nn.softmax(logits)
             
@@ -56,11 +54,12 @@ class model():
     def train(self):
         opt_ = tf.train.GradientDescentOptimizer(self.args.lr).minimize(self.loss)
         
-        labels, train = mk_train_data(self.args.data_dir+"train.txt", self.args.data_dir+"index.txt", self.args.max_time_step)
-        train_inp, test_inp, train_labels, test_labels = train_test_split(train, labels, test_size=0.33, random_state=42)
+        train_labels, train_inp = mk_train_data(self.args.data_dir+"train.txt", self.args.data_dir+"index.txt", self.args.max_time_step)
+        if self.args.test:
+            train_inp, test_inp, train_labels, test_labels = train_test_split(train_inp, train_labels, test_size=0.33, random_state=42)
+            test_data_size = test_inp.shape[0]
+
         train_data_size = train_inp.shape[0]
-        test_data_size = test_inp.shape[0]
-        print(train_inp.shape, test_inp.shape, train_labels.shape, test_labels.shape, train_data_size)
         
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
@@ -86,15 +85,16 @@ class model():
                 if itr % 1000 == 0:
                     saver.save(sess, self.args.saved + '/word_level_cnn_model.ckpt', itr)
                     print('-----------------------saved model-------------------------')
-
-            acctualy_ = 0.
-            for i in range(int(test_data_size/self.args.batch_size)):
-                labels = test_labels[i*self.args.batch_size:(i+1)*self.args.batch_size]
-                out = sess.run(self.out, feed_dict={self.inputs: test_inp[i*self.args.batch_size:(i+1)*self.args.batch_size]})
-                acctualy = len([i for i in range(self.args.batch_size) if np.argmax(out, -1)[i] == np.argmax(labels, -1)[i]])/self.args.batch_size
-                acctualy_ += acctualy
-                print(acctualy)
-            print("avg", acctualy_/(int(test_data_size/self.args.batch_size)))
+            
+            if self.args.test:
+                acctualy_ = 0.
+                for i in range(int(test_data_size/self.args.batch_size)):
+                    labels = test_labels[i*self.args.batch_size:(i+1)*self.args.batch_size]
+                    out = sess.run(self.out, feed_dict={self.inputs: test_inp[i*self.args.batch_size:(i+1)*self.args.batch_size]})
+                    acctualy = len([i for i in range(self.args.batch_size) if np.argmax(out, -1)[i] == np.argmax(labels, -1)[i]])/self.args.batch_size
+                    acctualy_ += acctualy
+                    print(acctualy)
+                print("avg", acctualy_/(int(test_data_size/self.args.batch_size)))
             
 
 
@@ -112,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=2348)
     parser.add_argument("--train", dest="train", type=bool, default=True)
     parser.add_argument("--saved", dest="saved", type=str, default="save/")
+    parser.add_argument("--test", dest="test", type=bool, default=True)
     args= parser.parse_args()
 
     if not os.path.exists(args.saved):
