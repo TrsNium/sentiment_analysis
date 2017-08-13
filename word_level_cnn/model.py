@@ -29,7 +29,6 @@ class model():
                 t_embedded.append(embedded)
             cnn_inputs = tf.reshape(tf.transpose(tf.convert_to_tensor(t_embedded), perm=(1,0,2,3)), (-1, args.max_time_step, args.embedding_size,1))
            
-
         kernels = [2,3,4,5,6]
         filter_nums = [32,64,128,128,224]
         with tf.variable_scope("CNN") as scope:
