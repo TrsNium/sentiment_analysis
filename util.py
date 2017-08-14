@@ -68,7 +68,7 @@ def convert_label(labels):
 def convert_sentence2word_idx(sentences, indexs, time_step, word_length):
     r = []
     for sentence in sentences:
-        words = remove_anti_pattern(sentence).split(" ")
+        words = sentence.split(" ")
         t = []
         for word in words[:-1]:
             converted = [indexs.index(char) for char in word]

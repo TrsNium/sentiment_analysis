@@ -51,9 +51,6 @@ class model():
             word_t  = tf.split(self.inputs, self.args.max_time_step, axis=1)
 
             for t in range(self.args.max_time_step):
-                #if t is not 0:
-                    #tf.get_variable_scope().reuse_variables()
-
                 char_index = tf.reshape(word_t[t], shape=[-1, self.args.max_word_length])
                 embedded = tf.nn.embedding_lookup(embedding_weight, char_index)
                 embedded_ = tf.expand_dims(embedded, -1)
@@ -93,7 +90,7 @@ class model():
             rnn_out, self.out_state = tf.nn.dynamic_rnn(cell, cnn_outputs, initial_state=state_in, time_major=True,dtype=tf.float32)
         
         with tf.variable_scope("dense_layer") as scope:
-            dense_input = rnn_out[-1]
+            dense_input = tf.reduce_sum(rnn_out, axis=0)
             logits = tf.layers.dropout(tf.layers.dense(dense_input, 2, name="Dense"), rate=0.5, training=True)
             self.outs = tf.nn.softmax(logits)
 
@@ -109,14 +106,13 @@ class model():
         return y
     
     def train(self):
-        opt_ = tf.train.AdamOptimizer(self.args.lr, beta1=0.5).minimize(self.loss)
+        opt_ = tf.train.GradientDescentOptimizer(self.args.lr).minimize(self.loss)
         
         train_labels, train_inp, sentences = mk_char_level_cnn_rnn_train_data(self.args.data_dir+"train.txt", self.args.data_dir+"char_index.txt", self.args.max_time_step, self.args.max_word_length)
         if self.args.test:
             train_inp, test_inp, train_labels, test_labels = train_test_split(train_inp, train_labels, test_size=0.33, random_state=42)
             test_data_size = test_inp.shape[0]
         train_data_size = train_inp.shape[0]
-        #print(train_inp.shape, test_inp.shape, train_labels.shape, test_labels.shape, train_data_size)
         
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
@@ -136,28 +132,39 @@ class model():
                     sentences_ = [sentences[idx] for idx in choiced_idx]
                     loss, out = sess.run([self.loss, self.outs], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:labels})
                     accuracy = len([i for i in range(self.args.batch_size) if np.argmax(labels[i], axis=-1) == np.argmax(out[i], axis=-1)])/self.args.batch_size
-                    print("itr:",itr,"    loss:", loss, out, accuracy, sentences_)
+                    print("itr:",itr,"    loss:", loss, accuracy)
             
                 if itr % 1000 == 0:
-                    saver.save(sess, 'saved/model.ckpt', itr)
+                    saver.save(sess, 'save/model.ckpt', itr)
                     print('-----------------------saved model-------------------------')
+
+
+            if self.args.test:
+                acctualy_ = 0
+                for i in range(int(test_data_size/self.args.batch_size)):
+                    labels = test_labels[i*self.args.batch_size:(i+1)*self.args.batch_size]
+                    out = sess.run(self.out, feed_dict={self.inputs: test_inp[i*self.args.batch_size:(i+1)*self.args.batch_size]})
+                    acctualy = len([i for i in range(self.args.batch_size) if np.argmax(out, -1)[i] == np.argmax(labels, -1)[i]])/self.args.batch_size
+                    acctualy_ += acctualy
+                    print(acctualy)
+                print("avg", acctualy_/(int(test_data_size/self.args.batch_size)))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("--lr", dest="lr", type=float, default= 0.2)
-    parser.add_argument("--cell_model", dest="cell_model", type= str, default="lstm")
+    parser.add_argument("--lr", dest="lr", type=float, default= 0.02)
+    parser.add_argument("--cell_model", dest="cell_model", type= str, default="gru")
     parser.add_argument("--data_dir", dest="data_dir", type=str, default="../data/")
-    parser.add_argument("--num_layers", dest="num_layers", type=int, default=2)
-    parser.add_argument("--rnn_size", dest="rnn_size", type=int, default=1024)
+    parser.add_argument("--num_layers", dest="num_layers", type=int, default=1)
+    parser.add_argument("--rnn_size", dest="rnn_size", type=int, default=512)
     parser.add_argument("--max_word_length", dest="max_word_length", type=int, default=15)
-    parser.add_argument("--filter_nums", dest="filter_nums", type=list, default=[64,64,64,128,128,128])
+    parser.add_argument("--filter_nums", dest="filter_nums", type=list, default=[32,32,64,64,128,128])
     parser.add_argument("--hightway", dest="highway", type=bool, default=True)
     parser.add_argument("--kernels", dest="kernels", type=list, default=[2,3,4,5,6,7])
     parser.add_argument("--index_dir", dest="index_dir", type=str, default="../data/char_index.txt")
     parser.add_argument("--itrs", dest="itrs", type=int, default=2001)
     parser.add_argument("--batch_size", dest="batch_size", type=int, default=10)
-    parser.add_argument("--embedding_size", dest="embedding_size", default=650)
-    parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=40)
+    parser.add_argument("--embedding_size", dest="embedding_size", default=64)
+    parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=35)
     parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=45)
     parser.add_argument("--train", dest="train", type=bool, default=True)
     parser.add_argument("--saved", dest="saved", type=str, default="save/")
