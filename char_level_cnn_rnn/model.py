@@ -90,7 +90,8 @@ class model():
             rnn_out, self.out_state = tf.nn.dynamic_rnn(cell, cnn_outputs, initial_state=state_in, time_major=True,dtype=tf.float32)
         
         with tf.variable_scope("dense_layer") as scope:
-            dense_input = tf.reduce_sum(rnn_out, axis=0)
+            #dense_input = tf.reduce_sum(rnn_out, axis=0)
+            dense_input = rnn_out[-1]
             logits = tf.layers.dropout(tf.layers.dense(dense_input, 2, name="Dense"), rate=0.5, training=True)
             self.outs = tf.nn.softmax(logits)
 
@@ -143,7 +144,7 @@ class model():
                 acctualy_ = 0
                 for i in range(int(test_data_size/self.args.batch_size)):
                     labels = test_labels[i*self.args.batch_size:(i+1)*self.args.batch_size]
-                    out = sess.run(self.out, feed_dict={self.inputs: test_inp[i*self.args.batch_size:(i+1)*self.args.batch_size]})
+                    out = sess.run(self.outs, feed_dict={self.inputs: test_inp[i*self.args.batch_size:(i+1)*self.args.batch_size]})
                     acctualy = len([i for i in range(self.args.batch_size) if np.argmax(out, -1)[i] == np.argmax(labels, -1)[i]])/self.args.batch_size
                     acctualy_ += acctualy
                     print(acctualy)
@@ -157,12 +158,12 @@ if __name__ == "__main__":
     parser.add_argument("--num_layers", dest="num_layers", type=int, default=1)
     parser.add_argument("--rnn_size", dest="rnn_size", type=int, default=512)
     parser.add_argument("--max_word_length", dest="max_word_length", type=int, default=15)
-    parser.add_argument("--filter_nums", dest="filter_nums", type=list, default=[32,32,64,64,128,128])
+    parser.add_argument("--filter_nums", dest="filter_nums", type=list, default=[32,64,64,64,128,128])
     parser.add_argument("--hightway", dest="highway", type=bool, default=True)
     parser.add_argument("--kernels", dest="kernels", type=list, default=[2,3,4,5,6,7])
     parser.add_argument("--index_dir", dest="index_dir", type=str, default="../data/char_index.txt")
-    parser.add_argument("--itrs", dest="itrs", type=int, default=2001)
-    parser.add_argument("--batch_size", dest="batch_size", type=int, default=10)
+    parser.add_argument("--itrs", dest="itrs", type=int, default=1001)
+    parser.add_argument("--batch_size", dest="batch_size", type=int, default=20)
     parser.add_argument("--embedding_size", dest="embedding_size", default=64)
     parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=35)
     parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=45)
