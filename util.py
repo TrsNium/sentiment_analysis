@@ -74,12 +74,12 @@ def convert_sentence2word_idx(sentences, indexs, time_step, word_length):
             converted = [indexs.index(char) for char in word]
             while len(converted) != word_length and len(converted) <= word_length:
                 converted.append(len(indexs))
-            t.append(converted)
+            t.append(converted[:word_length])
             
         while len(t) != time_step and len(t) <= time_step:
             t.insert(0, [len(indexs)+1]*word_length)
         
-        r.append(t)
+        r.append(t[:time_step])
     return r
             
 
@@ -97,7 +97,7 @@ def mk_char_level_cnn_rnn_train_data(data_path, index_path, time_step, word_leng
     indexs = read_index(index_path)
     labels = convert_label(labels)
     converted_sentences = convert_sentence2word_idx(sentences, indexs, time_step, word_length)
-    return np.array(labels), np.array(converted_sentences), sentences
+    return np.array(labels).astype(np.float32), np.array(converted_sentences).astype(np.int32), sentences
 
 def mk_train_data(data_path, index_path, time_step):
     labels, sentences = read_training_data(data_path)
