@@ -65,7 +65,6 @@ class model():
                     pool_ = tf.layers.max_pooling2d(conv_, pool_size=[self.args.max_word_length-kernel+1, 1], strides=[1, 1])
                     t_cnn_outputs.append(tf.reshape(bn(pool_), (-1, filter_num)))
 
-                #print(tf.convert_to_tensor(t_cnn_outputs).get_shape().as_list())
                 cnn_output = tf.contrib.layers.batch_norm(tf.concat([t_cnn_output for t_cnn_output in t_cnn_outputs], axis=-1))
                 cnn_outputs.append(self.highway(cnn_output, sum(self.args.filter_nums), reuse= True if t!=0 else False)) if  self.args.highway == True \
                                                                                             else cnn_outputs.append(cnn_output)
@@ -110,12 +109,12 @@ class model():
         return y
     
     def train(self):
-        #opt_ = tf.train.GradientDescentOptimizer(0.3).minimize(self.loss)
-        #opt_ = tf.train.GradientDescentOptimizer(0.003).minimize(self.loss)
         opt_ = tf.train.AdamOptimizer(self.args.lr, beta1=0.5).minimize(self.loss)
         
-        labels, train, sentences = mk_char_level_cnn_rnn_train_data(self.args.data_dir+"train.txt", self.args.data_dir+"char_index.txt", self.args.max_time_step, self.args.max_word_length)
-        train_inp, test_inp, train_labels, test_labels = train_test_split(train, labels, test_size=0.33, random_state=42)
+        train_labels, train_inp, sentences = mk_char_level_cnn_rnn_train_data(self.args.data_dir+"train.txt", self.args.data_dir+"char_index.txt", self.args.max_time_step, self.args.max_word_length)
+        if self.args.test:
+            train_inp, test_inp, train_labels, test_labels = train_test_split(train_inp, train_labels, test_size=0.33, random_state=42)
+            test_data_size = test_inp.shape[0]
         train_data_size = train_inp.shape[0]
         #print(train_inp.shape, test_inp.shape, train_labels.shape, test_labels.shape, train_data_size)
         
@@ -163,6 +162,7 @@ if __name__ == "__main__":
     parser.add_argument("--train", dest="train", type=bool, default=True)
     parser.add_argument("--saved", dest="saved", type=str, default="save/")
     parser.add_argument("--keep_prob", dest="keep_prob", type=float, default=0.5)
+    parser.add_argument("--test", dest='test', type=bool, default=True)
     args= parser.parse_args()
 
     if not os.path.exists(args.saved):
