@@ -97,7 +97,7 @@ def mk_char_level_cnn_rnn_train_data(data_path, index_path, time_step, word_leng
     indexs = read_index(index_path)
     labels = convert_label(labels)
     converted_sentences = convert_sentence2word_idx(sentences, indexs, time_step, word_length)
-    return np.array(labels), np.array(converted_sentences)
+    return np.array(labels), np.array(converted_sentences), sentences
 
 def mk_train_data(data_path, index_path, time_step):
     labels, sentences = read_training_data(data_path)

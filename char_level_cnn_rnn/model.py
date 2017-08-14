@@ -13,7 +13,7 @@ import os
 import random
 
 class batch_norm(object):
-  """Code modification of http://stackoverflow.com/a/33950177"""
+    """Code modification of http://stackoverflow.com/a/33950177"""
     def __init__(self, epsilon=1e-5, momentum = 0.1, name="batch_norm"):
         with tf.variable_scope(name) as scope:
             self.epsilon = epsilon
@@ -21,8 +21,8 @@ class batch_norm(object):
 
             self.ema = tf.train.ExponentialMovingAverage(decay=self.momentum)
             self.name=name
-
-    def __call__(self, x, train=True):
+    
+    def __call__(self, x, train=True, reuse=False):
         shape = x.get_shape().as_list()
 
         with tf.variable_scope(self.name) as scope:
@@ -31,9 +31,9 @@ class batch_norm(object):
             self.beta = tf.get_variable("beta", [shape[-1]],
             initializer=tf.constant_initializer(0.))
 
-            mean, variance = tf.nn.moments(x, [0, 1, 2])
+            mean, variance = tf.nn.moments(x, [0, 1])
 
-              return tf.nn.batch_norm_with_global_normalization(
+            return tf.nn.batch_norm_with_global_normalization(
                      x, mean, variance, self.beta, self.gamma, self.epsilon,
                      scale_after_normalization=True)
 
@@ -49,24 +49,25 @@ class model():
             
             embedding_weight = tf.Variable(tf.random_uniform([self.args.vocab_size, self.args.embedding_size],-1.,1.), name='embedding_weight')
             word_t  = tf.split(self.inputs, self.args.max_time_step, axis=1)
+
             for t in range(self.args.max_time_step):
-                if t is not 0:
-                    tf.get_variable_scope().reuse_variables()
+                #if t is not 0:
+                    #tf.get_variable_scope().reuse_variables()
 
                 char_index = tf.reshape(word_t[t], shape=[-1, self.args.max_word_length])
                 embedded = tf.nn.embedding_lookup(embedding_weight, char_index)
                 embedded_ = tf.expand_dims(embedded, -1)
 
                 t_cnn_outputs = []
-                for kernel, filter_num in zip(self.args.kernels, self.args.filter_nums):
-                    conv_ = tf.layers.conv2d(embedded_, filter_num, kernel_size=[kernel, self.args.embedding_size], padding="valid", strides=[1, 1], activation=tf.nn.relu, name="conv_{}".format(kernel))
+                for i, (kernel, filter_num) in enumerate(zip(self.args.kernels, self.args.filter_nums)):
+                    bn = batch_norm(name='batch_norm_{}_{}'.format(t,i))
+                    conv_ = tf.layers.conv2d(embedded_, filter_num, kernel_size=[kernel, self.args.embedding_size], padding="valid", strides=[1, 1], activation=tf.nn.relu, name="conv_{}".format(kernel), reuse= True if t!=0 else False)
                     pool_ = tf.layers.max_pooling2d(conv_, pool_size=[self.args.max_word_length-kernel+1, 1], strides=[1, 1])
-                    #print(pool_.get_shape().as_list())
-                    t_cnn_outputs.append(tf.reshape(pool_, (-1, filter_num)))
+                    t_cnn_outputs.append(tf.reshape(bn(pool_), (-1, filter_num)))
 
                 #print(tf.convert_to_tensor(t_cnn_outputs).get_shape().as_list())
                 cnn_output = tf.contrib.layers.batch_norm(tf.concat([t_cnn_output for t_cnn_output in t_cnn_outputs], axis=-1))
-                cnn_outputs.append(self.highway(cnn_output, sum(self.args.filter_nums))) if  self.args.highway == True \
+                cnn_outputs.append(self.highway(cnn_output, sum(self.args.filter_nums), reuse= True if t!=0 else False)) if  self.args.highway == True \
                                                                                             else cnn_outputs.append(cnn_output)
             cnn_outputs = tf.convert_to_tensor(cnn_outputs)
      
@@ -100,9 +101,9 @@ class model():
         with tf.variable_scope("loss") as scope:
             self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.labels))
     
-    def highway(self, x, size, activation=tf.nn.tanh, carry_bias=-1.0):
-        T = tf.layers.dense(x, size, activation=tf.nn.sigmoid, name="transfort_gate")
-        H = tf.layers.dense(x, size, activation=activation, name="activation")
+    def highway(self, x, size, activation=tf.nn.tanh, carry_bias=-1.0, reuse=False):
+        T = tf.layers.dense(x, size, activation=tf.nn.sigmoid, name="transfort_gate", reuse=reuse)
+        H = tf.layers.dense(x, size, activation=activation, name="activation", reuse=reuse)
         C = tf.subtract(1.0, T, name="carry_gate")
 
         y = tf.add(tf.multiply(H, T), tf.multiply(x, C), "y")
