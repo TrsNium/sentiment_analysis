@@ -14,7 +14,7 @@ class model():
         self.args = args
 
         self.inputs = tf.placeholder(dtype=tf.float32, shape=[None, args.max_time_step, args.vocab_size], name="inputs")
-        self.labels = tf.placeholder(dtype=tf.float32, shape=[None, args.max_time_step, 2])
+        self.labels = tf.placeholder(dtype=tf.float32, shape=[None, 2])
 
         if args.cell_type == 'rnn':
             cell_fn = tf.contrib.rnn.BasicRNNCell
@@ -43,8 +43,8 @@ class model():
             else:
                 logits = tf.layers.dense(reshaped_rnn_outs[-1], 2, activation=tf.nn.sigmoid, name="final_outputs_dense")
 
-            self.loss = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.labels)
-            self.outs = tf.nn.softmax(logits)
+            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.labels))
+            self.out = tf.nn.softmax(logits)
         
     def train(self):
         opt_ = tf.train.GradientDescentOptimizer(self.args.lr).minimize(self.loss)
@@ -69,8 +69,7 @@ class model():
                 if itr % 20 == 0:
                     choiced_idx = random.sample(range(train_data_size), self.args.batch_size)
                     labels = train_labels[choiced_idx]
-                    loss, merged_summary, out = sess.run([self.loss, summary, self.out], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:labels})
-                    graph.add_summary(merged_summary, itr)
+                    loss, out = sess.run([self.loss, self.out], feed_dict={self.inputs: train_inp[choiced_idx], self.labels:labels})
                     acctualy = len([i for i in range(self.args.batch_size) if np.argmax(out, -1)[i] == np.argmax(labels, -1)[i]])/self.args.batch_size
                     print("itr:",itr,"    loss:", loss, acctualy)
 
@@ -94,16 +93,23 @@ if __name__ == "__main__":
     parser.add_argument("--lr", dest="lr", type=float, default= 0.02)
     parser.add_argument("--cell_type", dest="cell_type", type= str, default="lstm")
     parser.add_argument("--data_dir", dest="data_dir", type=str, default="../data/")
-    parser.add_argument("--num_layers", dest="num_layers", type=int, default=1)
-    parser.add_argument("--rnn_size", dest="rnn_size", type=int, default=512)
-    parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=40)
+    parser.add_argument("--num_layers", dest="num_layers", type=int, default=2)
+    parser.add_argument("--rnn_size", dest="rnn_size", type=int, default=256)
+    parser.add_argument("--max_time_step", dest="max_time_step", type=int, default=20)
     parser.add_argument("--vocab_size", dest="vocab_size", type=int, default=2347)
     parser.add_argument("--train", dest="train", type=bool, default=True)
     parser.add_argument("--test", dest="test", type=bool, default=True)
     parser.add_argument("--keep_prob", dest="keep_prob", type=float, default=0.4)
-    parser.add_argument("--betch_size", dest="batch_size", type=int, default=10)
+    parser.add_argument("--betch_size", dest="batch_size", type=int, default=20)
     parser.add_argument("--itrs", dest="itrs", type=int, default=100001) 
     args = parser.parse_args()
+
+    if not os.path.exists("save"):
+        os.mkdir("save")
+
+    if not os.path.exists("logs"):
+        os.mkdir("logs")
+
 
     model_ = model(args)
     if args.train:
