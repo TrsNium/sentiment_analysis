@@ -65,23 +65,22 @@ def convert_label(labels):
         r.append(content)
     return np.array(r)
 
-def convert_senteo2one_hot_encoding(sentence, indexs, time_step):
+def convert_senteo2one_hot_encoding(sentences, indexs, time_step):
     r = []
     for sentence in sentences:
         words = sentence.split(" ")
         time_steps = []
-        for word in words
-            content = [0]*len(indexs+1)
+        for word in words:
+            content = [0]*(len(indexs)+1)
             idx = indexs.index(word)
             content[idx] = 1
             time_steps.append(content)
 
         while len(time_steps) <= time_step and len(time_steps) != time_step:
-            content = [0]*len(indexs+1)
-            content[len(indexs)] + 1
+            content = [0]*(len(indexs)+1)
+            content[len(indexs)] = 1
             time_steps.insert(0, content)
 
-        print(len(time_steps))
         r.append(time_steps[:time_step])
     return r
 
@@ -100,8 +99,7 @@ def convert_sentence2word_idx(sentences, indexs, time_step, word_length):
             t.insert(0, [len(indexs)+1]*word_length)
         
         r.append(t[:time_step])
-    return r
-            
+    return r    
 
 def mk_char_level_cnn_rnn_train_data(data_path, index_path, time_step, word_length=40):
     labels, sentences = read_training_data(data_path)
@@ -135,7 +133,7 @@ def mk_train_data(data_path, index_path, time_step):
 
 def mk_train_onehot_data(data_path, index_path, time_step):
     labels, sentences = read_training_data(data_path)
-    if not os.path.exists(index_path)
+    if not os.path.exists(index_path):
         word = []
         for r_text in sentences:
             print(r_text)
