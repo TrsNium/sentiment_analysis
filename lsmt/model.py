@@ -101,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument("--test", dest="test", type=bool, default=True)
     parser.add_argument("--keep_prob", dest="keep_prob", type=float, default=0.4)
     parser.add_argument("--betch_size", dest="batch_size", type=int, default=20)
-    parser.add_argument("--itrs", dest="itrs", type=int, default=100001) 
+    parser.add_argument("--itrs", dest="itrs", type=int, default=7001) 
     args = parser.parse_args()
 
     if not os.path.exists("save"):
