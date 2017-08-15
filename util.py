@@ -65,6 +65,26 @@ def convert_label(labels):
         r.append(content)
     return np.array(r)
 
+def convert_senteo2one_hot_encoding(sentence, indexs, time_step):
+    r = []
+    for sentence in sentences:
+        words = sentence.split(" ")
+        time_steps = []
+        for word in words
+            content = [0]*len(indexs+1)
+            idx = indexs.index(word)
+            content[idx] = 1
+            time_steps.append(content)
+
+        while len(time_steps) <= time_step and len(time_steps) != time_step:
+            content = [0]*len(indexs+1)
+            content[len(indexs)] + 1
+            time_steps.insert(0, content)
+
+        print(len(time_steps))
+        r.append(time_steps[:time_step])
+    return r
+
 def convert_sentence2word_idx(sentences, indexs, time_step, word_length):
     r = []
     for sentence in sentences:
@@ -112,3 +132,17 @@ def mk_train_data(data_path, index_path, time_step):
     labels = convert_label(labels)
     converted_sentences = convert_sentence2index(sentences, indexs, time_step)
     return np.array(labels), np.reshape(np.array(converted_sentences), (-1, time_step, 1))
+
+def mk_train_onehot_data(data_path, index_path, time_step):
+    labels, sentences = read_training_data(data_path)
+    if not os.path.exists(index_path)
+        word = []
+        for r_text in sentences:
+            print(r_text)
+            [word.append(word_) for word_ in r_text.aplit(' ')]
+        save_index(set(word), index_path)
+
+    indexs = read_index(index_path)
+    labels = convert_label(labels)
+    converted_sentences = convert_senteo2one_hot_encoding(sentences, indexs, time_step)
+    return np.array(labels), np.array(converted_sentences)
