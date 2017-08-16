@@ -16,39 +16,40 @@ class model():
         self.inputs = tf.placeholder(dtype=tf.int32, shape=[None, args.max_time_step, 1])
         self.labels = tf.placeholder(dtype=tf.float32, shape=[None, 2])
         
-        with tf.variable_scope("Embedding") as scope:
-            splitted_word_ids  = tf.split(self.inputs, args.max_time_step, axis=1)
-            embedding_weight = tf.Variable(tf.random_uniform([args.vocab_size, args.embedding_size],-1.,1.), name='embedding_weight')
-            t_embedded = []
+        with tf.variable_scope("Word_Level_CNN") as scope:
+            with tf.variable_scope("Embedding") as scope:
+                splitted_word_ids  = tf.split(self.inputs, args.max_time_step, axis=1)
+                embedding_weight = tf.Variable(tf.random_uniform([args.vocab_size, args.embedding_size],-1.,1.), name='embedding_weight')
+                t_embedded = []
             
-            for t in range(args.max_time_step):
-                if t is not 0:
-                    tf.get_variable_scope().reuse_variables()
+                for t in range(args.max_time_step):
+                    if t is not 0:
+                        tf.get_variable_scope().reuse_variables()
 
-                embedded = tf.nn.embedding_lookup(embedding_weight, self.inputs[:,t,:])
-                t_embedded.append(embedded)
-            cnn_inputs = tf.reshape(tf.transpose(tf.convert_to_tensor(t_embedded), perm=(1,0,2,3)), (-1, args.max_time_step, args.embedding_size,1))
+                    embedded = tf.nn.embedding_lookup(embedding_weight, self.inputs[:,t,:])
+                    t_embedded.append(embedded)
+                cnn_inputs = tf.reshape(tf.transpose(tf.convert_to_tensor(t_embedded), perm=(1,0,2,3)), (-1, args.max_time_step, args.embedding_size,1))
            
-        kernels = [2,3,4,5,6]
-        filter_nums = [32,64,128,128,224]
-        with tf.variable_scope("CNN") as scope:
-            convded = []
-            for kernel, filter_num in zip(kernels, filter_nums):
-                conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, padding='valid', name="conv_{}".format(kernel))
-                pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], padding='valid', strides=[1, 1])
-                convded.append(tf.reshape(pool_, (-1, filter_num)))
-            convded = tf.concat([cnn_output for cnn_output in convded], axis=-1)
+            kernels = [2,3,4,5,6]
+            filter_nums = [32,64,128,128,224]
+            with tf.variable_scope("CNN") as scope:
+                convded = []
+                for kernel, filter_num in zip(kernels, filter_nums):
+                    conv_ = tf.layers.conv2d(cnn_inputs, filter_num, kernel_size=[kernel, args.embedding_size], strides=[1, 1], activation=tf.nn.relu, padding='valid', name="conv_{}".format(kernel))
+                    pool_ = tf.layers.max_pooling2d(conv_, pool_size=[args.max_time_step-kernel+1, 1], padding='valid', strides=[1, 1])
+                    convded.append(tf.reshape(pool_, (-1, filter_num)))
+                convded = tf.concat([cnn_output for cnn_output in convded], axis=-1)
         
-        with tf.variable_scope("Dense") as scope:
-            flatten_ = tf.contrib.layers.flatten(convded)
-            logits = tf.layers.dense(flatten_, 2, name="dense_layer")
-            self.out = tf.nn.softmax(logits)
+            with tf.variable_scope("Dense") as scope:
+                flatten_ = tf.contrib.layers.flatten(convded)
+                logits = tf.layers.dense(flatten_, 2, name="dense_layer")
+                self.out = tf.nn.softmax(logits)
             
-        with tf.variable_scope("loss") as scope:
-            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.labels))
+            with tf.variable_scope("loss") as scope:
+                self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=self.labels))
         
-        with tf.variable_scope("summary") as scope:
-            tf.summary.scalar("loss", self.loss)
+            with tf.variable_scope("summary") as scope:
+                tf.summary.scalar("loss", self.loss)
 
     def train(self):
         opt_ = tf.train.GradientDescentOptimizer(self.args.lr).minimize(self.loss)
@@ -94,9 +95,7 @@ class model():
                     acctualy_ += acctualy
                     print(acctualy)
                 print("avg", acctualy_/(int(test_data_size/self.args.batch_size)))
-            
-
-
+        
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
