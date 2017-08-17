@@ -83,7 +83,7 @@ class model():
                     print("itr:",itr,"    loss:", loss, acctualy)
             
                 if itr % 1000 == 0:
-                    saver.save(sess, self.args.saved + '/word_level_cnn_model.ckpt', itr)
+                    saver.save(sess, self.args.saved + '/word_level_cnn_model.ckpt')
                     print('-----------------------saved model-------------------------')
             
             if self.args.test:
