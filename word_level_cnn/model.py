@@ -8,6 +8,8 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import os
 import random
+from tensorflow.python.framework import graph_util
+from tensorflow.python.framework.graph_util import convert_variables_to_constants
 
 class model():
     def __init__(self, args):
@@ -18,7 +20,6 @@ class model():
         
         with tf.variable_scope("Word_Level_CNN") as scope:
             with tf.variable_scope("Embedding") as scope:
-                splitted_word_ids  = tf.split(self.inputs, args.max_time_step, axis=1)
                 embedding_weight = tf.Variable(tf.random_uniform([args.vocab_size, args.embedding_size],-1.,1.), name='embedding_weight')
                 t_embedded = []
             
@@ -41,7 +42,7 @@ class model():
                 convded = tf.concat([cnn_output for cnn_output in convded], axis=-1)
         
             with tf.variable_scope("Dense") as scope:
-                flatten_ = tf.contrib.layers.flatten(convded)
+                flatten_ = tf.identity(tf.contrib.layers.flatten(convded), "flatten")
                 logits = tf.layers.dense(flatten_, 2, name="dense_layer")
                 self.out = tf.nn.softmax(logits)
             
@@ -67,7 +68,7 @@ class model():
         with tf.Session(config=config) as sess:
             summary = tf.summary.merge_all()
             tf.global_variables_initializer().run()
-            saver = tf.train.Saver(tf.global_variables())
+            saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.VARIABLES, scope='Word_Level_CNN'))
             graph = tf.summary.FileWriter("./logs", sess.graph)
             
             for itr in range(self.args.itrs):
@@ -85,7 +86,9 @@ class model():
                 if itr % 1000 == 0:
                     saver.save(sess, self.args.saved + '/word_level_cnn_model.ckpt')
                     print('-----------------------saved model-------------------------')
-            
+
+            minimal_graph = convert_variables_to_constants(sess, sess.graph_def, ["Word_Level_CNN/Dense/flatten"])
+            tf.train.write_graph(minimal_graph,'.','./save/graph.pb', as_text=False)
             if self.args.test:
                 acctualy_ = 0.
                 for i in range(int(test_data_size/self.args.batch_size)):
